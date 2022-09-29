@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  loki:
+    container_name: loki
+    image: grafana/loki:2.3.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yaml
+      - aggregator-loki:/data/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        max-size: "200m"
+
+  grafana:
+    image: "grafana/grafana:latest"
+    restart: unless-stopped
+    user: "$PUID:$PGID"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    volumes:
+      - "aggregator-grafana:/var/lib/grafana"
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    # uncomment this if you want to allow anonymous access to Grafana
+    #environment:
+    #  - GF_AUTH_DISABLE_LOGIN_FORM=true
+    #  - GF_AUTH_ANONYMOUS_ENABLED=true
+    #  - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    #  - GF_SECURITY_ALLOW_EMBEDDING=true
+
+
+  influxdb:
+    image: "influxdb:1.8"
+    restart: unless-stopped
+    volumes:
+      - "aggregator-influxdb:/var/lib/influxdb"
+    healthcheck:
+      test: ["CMD", "curl", "-sI", "http://127.0.0.1:8086/ping"]
+      interval: 30s
+      timeout: 1s
+      retries: 24
+    ports:
+      - 127.0.0.1:8086:8086
+
+volumes:
+  aggregator-influxdb:
+    driver: local
+  aggregator-grafana:
+    driver: local
+  aggregator-loki:
+    driver: local
