@@ -1,2 +1,2 @@
 
-docker compose -f aggregator.yml up --build -d
+docker-compose -f aggregator.yml up --build -d
